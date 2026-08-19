@@ -374,8 +374,8 @@ async def send_sms_endpoint_deprecated(
 @router.post("/api/verify", response_model=VerifyResponse)
 async def verify_code(
     verify_data: UserVerify,
+    response: Response,
     db: AsyncSession = Depends(get_async_db),
-    response: Response | None = None,
 ):
     """
     Verify SMS code and activate user account.
@@ -439,7 +439,6 @@ async def login(
     sms_data: SMSRequest,
     request: Request,
     db: AsyncSession = Depends(get_async_db),
-    _response: Response | None = None,
 ):
     """
     Login by phone number.
@@ -583,8 +582,8 @@ async def sms_ru_webhook(request: Request, db: AsyncSession = Depends(get_async_
 @router.post("/api/auth/simulate-call")
 async def simulate_call_endpoint(
     sms_data: SMSRequest,
+    response: Response,
     db: AsyncSession = Depends(get_async_db),
-    response: Response | None = None,
 ):
     """
     Симуляция входящего звонка в тестовом режиме (SMS_TEST_MODE=True).
@@ -649,8 +648,8 @@ async def simulate_call_endpoint(
 @router.get("/api/auth/check-call-status")
 async def check_call_status(
     phone: str,
+    response: Response,
     db: AsyncSession = Depends(get_async_db),
-    response: Response | None = None,
 ):
     """
     Check verification status for Check Call method (polling endpoint).
@@ -688,9 +687,6 @@ async def check_call_status(
 
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    # Explicitly load phone to avoid lazy loading issues in async context
-    user_phone = user.phone
 
     # CRITICAL: Do NOT check user.is_verified here!
     # We must only verify based on the current sms_check_id status.
@@ -749,8 +745,8 @@ async def check_call_status(
 @router.post("/api/auth/simulate-check-call")
 async def simulate_check_call(
     phone: str,
+    response: Response,
     db: AsyncSession = Depends(get_async_db),
-    response: Response | None = None,
 ):
     """
     Simulate incoming check call in test mode (emulates SMS.ru webhook).
