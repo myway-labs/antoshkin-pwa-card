@@ -37,7 +37,10 @@ from app.schemas import (
     VerifyResponse,
 )
 from app.services.auth_dispatcher import send_verification_code
-from app.services.check_call_service import initiate_check_call, simulate_incoming_call
+from app.services.check_call_service import (
+    initiate_check_call,
+    simulate_incoming_call,
+)
 from app.services.crud import create_user, get_user_by_phone
 from app.services.session_service import create_session, delete_session
 from app.services.sms_service import verify_sms_code
@@ -540,7 +543,7 @@ async def sms_ru_webhook(
         api_id = settings.SMS_API_KEY  # Your SMS_API_KEY from SMS.ru
 
         # Collect all data entries for hash validation
-        data_entries = []
+        data_entries: list[str] = []
         for key, value in form_data.items():
             if key.startswith("data["):
                 data_entries.append(str(value))
@@ -586,6 +589,7 @@ async def sms_ru_webhook(
         return PlainTextResponse(content="100")
 
     except Exception as e:
+        # SMS.ru requires returning "100" even if processing fails
         logger.error(f"[WEBHOOK] Error processing SMS.ru webhook: {e!s}")
         return PlainTextResponse(content="100")
 
