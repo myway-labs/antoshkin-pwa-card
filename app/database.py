@@ -7,11 +7,26 @@ Configures SQLAlchemy engine for SQLite database and provides
 session factories for both synchronous and asynchronous database operations.
 """
 
+from collections.abc import AsyncGenerator, Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import settings
+
+# =============================================================================
+# Base Declarative Model (SQLAlchemy 2.0)
+# =============================================================================
+
+
+class Base(DeclarativeBase):
+    """Base class for all SQLAlchemy declarative models."""
+
 
 # =============================================================================
 # Synchronous engine and session (for backward compatibility)
@@ -21,22 +36,18 @@ from app.config import settings
 # For SQLite: add check_same_thread=False to allow multiple threads
 sync_engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False}  # Required for SQLite
+    connect_args={"check_same_thread": False},  # Required for SQLite
 )
 
 # Create synchronous session factory
 SyncSessionLocal = sessionmaker(
     autocommit=False,
     autoflush=False,
-    bind=sync_engine
+    bind=sync_engine,
 )
 
-# Base class for declarative models
-# All models should inherit from this Base
-Base = declarative_base()
 
-
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """
     Dependency function for FastAPI to get synchronous database session.
 
@@ -63,7 +74,7 @@ def get_db():
 # This allows async operations with SQLite database
 ASYNC_DATABASE_URL = settings.DATABASE_URL.replace(
     "sqlite:///",
-    "sqlite+aiosqlite:///"
+    "sqlite+aiosqlite:///",
 )
 
 # Create async engine
@@ -71,7 +82,7 @@ ASYNC_DATABASE_URL = settings.DATABASE_URL.replace(
 async_engine = create_async_engine(
     ASYNC_DATABASE_URL,
     echo=False,  # Set True for SQL debugging
-    connect_args={"check_same_thread": False}  # Required for SQLite
+    connect_args={"check_same_thread": False},  # Required for SQLite
 )
 
 # Create async session factory
@@ -79,11 +90,11 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
     bind=async_engine,
-    class_=AsyncSession
+    class_=AsyncSession,
 )
 
 
-async def get_async_db():
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Async dependency function for FastAPI to get async database session.
 
@@ -106,7 +117,7 @@ async def get_async_db():
             await session.close()
 
 
-async def get_async_db_readonly():
+async def get_async_db_readonly() -> AsyncGenerator[AsyncSession, None]:
     """
     Async dependency for read-only database operations.
 
@@ -123,4 +134,3 @@ async def get_async_db_readonly():
             yield session
         finally:
             await session.close()
-
