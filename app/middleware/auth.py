@@ -15,6 +15,7 @@ Important:
 """
 
 from collections.abc import Awaitable, Callable
+from typing import override
 
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
@@ -59,6 +60,7 @@ class SessionAuthMiddleware(BaseHTTPMiddleware):
         - Session is NOT deleted on expiration (routes handle this)
     """
 
+    @override
     async def dispatch(
         self,
         request: Request,
