@@ -416,20 +416,13 @@ async def verify_code(
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     # Verify SMS code using service function
-    result = await verify_sms_code(db, user, verify_data.code)
+    success, message, user_id_opt = await verify_sms_code(db, user, verify_data.code)
 
-    # Unpack result (supports both (success, msg, user_id) and (success, msg))
-    if len(result) == 3:
-        success, message, user_id = result[0], result[1], result[2]
-    else:
-        success, message = result[0], result[1]
-        user_id = user.id
-
-    if not success:
+    if not success or user_id_opt is None:
         raise HTTPException(status_code=400, detail=message)
 
     # Create session and set cookie using saved user_id
-    token = await create_session(db, user_id)
+    token = await create_session(db, user_id_opt)
 
     # Set HttpOnly cookie
     if response:
