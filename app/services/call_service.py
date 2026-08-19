@@ -11,7 +11,7 @@ Functions:
 """
 
 import logging
-from typing import Tuple
+from typing import cast
 
 import httpx
 
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 TEST_CODE = "0000"  # Universal code for testing
 
 
-async def send_flash_call(phone: str, ip: str) -> Tuple[bool, str, str]:
+async def send_flash_call(phone: str, _ip: str) -> tuple[bool, str, str]:
     """
     Send Flash Call with verification code via SMS.ru API.
 
@@ -79,33 +79,40 @@ async def send_flash_call(phone: str, ip: str) -> Tuple[bool, str, str]:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+            _ = response.raise_for_status()
+            data = cast(dict[str, object], response.json())
 
             # Log full API response for debugging
-            logger.debug(f"[CALL] SMS.ru response for {phone}: {data}")
+            logger.debug("[CALL] SMS.ru response for %s: %s", phone, data)
             print(f"[CALL] SMS.ru response: {data}")
 
             if data.get("status") == "OK":
-                code = data.get("code")
-                call_id = data.get("call_id")
-                cost = data.get("cost")
-                balance = data.get("balance")
+                code = str(data.get("code", ""))
+                call_id = str(data.get("call_id", ""))
+                cost = str(data.get("cost", ""))
+                balance = str(data.get("balance", ""))
 
                 logger.info(
-                    f"[CALL] Initiated to {phone}, code: {code}, "
-                    f"call_id: {call_id}, cost: {cost}, balance: {balance}"
+                    "[CALL] Initiated to %s, code: %s, call_id: %s, cost: %s, balance: %s",
+                    phone,
+                    code,
+                    call_id,
+                    cost,
+                    balance,
                 )
                 return True, code, "Call initiated"
             else:
-                error_msg = data.get("status_text", "Unknown error")
-                status_code = data.get("status_code", "N/A")
+                error_msg = str(data.get("status_text", "Unknown error"))
+                status_code = str(data.get("status_code", "N/A"))
                 logger.error(
-                    f"[CALL] SMS.ru error for {phone}: {error_msg} (code: {status_code})"
+                    "[CALL] SMS.ru error for %s: %s (code: %s)",
+                    phone,
+                    error_msg,
+                    status_code,
                 )
                 return False, "", f"SMS.ru error: {error_msg}"
 
-    except httpx.TimeoutException as e:
+    except httpx.TimeoutException:
         error_msg = "Request timeout"
         logger.error(f"[CALL] Timeout for {phone}: {error_msg}")
         return False, "", f"Network error: {error_msg}"
@@ -117,5 +124,5 @@ async def send_flash_call(phone: str, ip: str) -> Tuple[bool, str, str]:
 
     except ValueError as e:
         error_msg = "JSON parse error"
-        logger.error(f"[CALL] JSON parse error for {phone}: {str(e)}")
+        logger.error(f"[CALL] JSON parse error for {phone}: {e!s}")
         return False, "", f"Response error: {error_msg}"
