@@ -245,7 +245,13 @@ async def card_page(request: Request, phone: str, db: AsyncSession = Depends(get
         # Redirect to verification page if not verified
         return request.state.templates.TemplateResponse(
             "verify.html",
-            {"request": request, "phone": phone}
+            {
+                "request": request,
+                "phone": phone,
+                "auth_method": settings.AUTH_METHOD,
+                "sms_test_mode": settings.SMS_TEST_MODE,
+                "call_phone": None,
+            }
         )
 
     return request.state.templates.TemplateResponse(
