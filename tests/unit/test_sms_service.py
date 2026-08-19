@@ -123,7 +123,8 @@ class TestVerifySmsCode:
         test_user_unverified.sms_code_expires_at = expires_at
         await db.commit()
         
-        success, message = await verify_sms_code(db, test_user_unverified, "1234")
+        result = await verify_sms_code(db, test_user_unverified, "1234")
+        success = result[0]
         assert success is True
         assert test_user_unverified.is_verified is True
 
@@ -151,16 +152,16 @@ class TestVerifySmsCode:
 
     @pytest.mark.asyncio
     async def test_verify_sms_code_already_verified(self, db, test_user):
-        """Верификация уже верифицированного пользователя."""
+        """Верификация уже верифицированного пользователя (повторный вход по SMS коду)."""
         test_user.is_verified = True
-        test_user.sms_code = None
-        test_user.sms_code_expires_at = None
+        test_user.sms_code = "1234"
+        test_user.sms_code_expires_at = datetime.utcnow() + timedelta(minutes=5)
         await db.commit()
         
-        # Already verified users return success=True with "Already verified" message
-        success, message = await verify_sms_code(db, test_user, "1234")
-        assert success is True
-        assert "Already verified" in message
+        # Previously verified user must still provide a valid active SMS code to verify session
+        result = await verify_sms_code(db, test_user, "1234")
+        assert result[0] is True
+        assert "Verified" in result[1]
 
     @pytest.mark.asyncio
     async def test_verify_sms_code_no_code(self, db, test_user_unverified):
