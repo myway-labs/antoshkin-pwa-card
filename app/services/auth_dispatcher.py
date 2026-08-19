@@ -12,15 +12,12 @@ Functions:
 """
 
 import logging
-from typing import Tuple, Optional
 
 from fastapi import Request
 
 from app.config import settings
-from app.models import User
-from app.services.sms_service import send_sms, generate_sms_code
 from app.services.call_service import send_flash_call
-from app.services.check_call_service import initiate_check_call
+from app.services.sms_service import generate_sms_code, send_sms
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -56,9 +53,8 @@ def get_client_ip(request: Request) -> str:
 
 
 async def send_verification_code(
-    phone: str,
-    request: Optional[Request] = None
-) -> Tuple[bool, str, str]:
+    phone: str, request: Request | None = None
+) -> tuple[bool, str, str]:
     """
     Send verification code using the configured method (SMS, Flash Call, or Check Call).
 
@@ -99,7 +95,9 @@ async def send_verification_code(
     elif settings.AUTH_METHOD == "check_call":
         # Check Call mode: should use dedicated endpoint, not this dispatcher
         # Return error to indicate incorrect usage
-        logger.error(f"[DISPATCHER] Check Call should use /api/auth/check-call/initiate, not send_verification_code")
+        logger.error(
+            "[DISPATCHER] Check Call should use /api/auth/check-call/initiate, not send_verification_code"
+        )
         return False, "", "Check Call requires dedicated endpoint"
     else:
         # SMS mode (default): generate code locally and send via SMS
