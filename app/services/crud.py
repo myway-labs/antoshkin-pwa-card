@@ -11,15 +11,16 @@ Provides async database operations for user management:
 - delete_user: Remove user from database
 """
 
-from datetime import datetime
-from typing import List, Optional
-from sqlalchemy import select, func
+from datetime import datetime, timezone
+from typing import cast
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
 
 
-async def get_user_by_phone(db: AsyncSession, phone: str) -> Optional[User]:
+async def get_user_by_phone(db: AsyncSession, phone: str) -> User | None:
     """
     Get user by phone number.
 
@@ -39,7 +40,7 @@ async def get_user_by_phone(db: AsyncSession, phone: str) -> Optional[User]:
     return result.scalar_one_or_none()
 
 
-async def get_user_by_id(db: AsyncSession, user_id: int) -> Optional[User]:
+async def get_user_by_id(db: AsyncSession, user_id: int) -> User | None:
     """
     Get user by ID.
 
@@ -74,7 +75,7 @@ async def create_user(db: AsyncSession, full_name: str, phone: str) -> User:
         full_name=full_name,
         phone=phone,
         is_verified=False,
-        created_at=datetime.utcnow()
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None)
     )
     db.add(db_user)
     await db.commit()
@@ -83,9 +84,7 @@ async def create_user(db: AsyncSession, full_name: str, phone: str) -> User:
 
 
 async def update_user(
-    db: AsyncSession,
-    user: User,
-    update_data: dict
+    db: AsyncSession, user: User, update_data: dict[str, object]
 ) -> User:
     """
     Update user fields.
@@ -116,7 +115,7 @@ async def get_all_users(
     db: AsyncSession,
     limit: int = 50,
     offset: int = 0
-) -> List[User]:
+) -> list[User]:
     """
     Get paginated list of all users.
 
@@ -157,7 +156,7 @@ async def count_users(db: AsyncSession) -> int:
         print(f"Total users: {total}")
     """
     result = await db.execute(select(func.count()).select_from(User))
-    return result.scalar()
+    return int(result.scalar() or 0)
 
 
 async def delete_user(db: AsyncSession, user: User) -> bool:
