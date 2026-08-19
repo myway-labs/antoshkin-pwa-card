@@ -8,8 +8,8 @@ Each class represents a table, each attribute represents a column.
 """
 
 import secrets
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime, timedelta, timezone
+from typing import Any, override
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -61,7 +61,9 @@ class User(Base):
     is_subscribed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
+    )
 
     # Relationship to Session objects
     # cascade="all, delete-orphan" ensures sessions are deleted when user is deleted
@@ -69,6 +71,7 @@ class User(Base):
         "Session", back_populates="user", cascade="all, delete-orphan"
     )
 
+    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         return f"<User(id={self.id}, phone='{self.phone}', verified={self.is_verified})>"
@@ -117,12 +120,14 @@ class Session(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
     # Timestamps
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None), nullable=False
+    )
 
     # Relationship to User object
     user: Mapped["User"] = relationship("User", back_populates="sessions")
 
-    def __init__(self, **kwargs: Any) -> None:
+    def __init__(self, **kwargs: object) -> None:
         """
         Initialize session with auto-generated token and expiration.
 
@@ -135,7 +140,7 @@ class Session(Base):
             self.token = secrets.token_urlsafe(32)
         # Set expiration to 30 days from now if not provided
         if not getattr(self, "expires_at", None):
-            self.expires_at = datetime.utcnow() + timedelta(days=30)
+            self.expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30)
 
     def is_valid(self) -> bool:
         """
@@ -144,8 +149,9 @@ class Session(Base):
         Returns:
             True if session is valid, False if expired
         """
-        return datetime.utcnow() < self.expires_at
+        return datetime.now(timezone.utc).replace(tzinfo=None) < self.expires_at
 
+    @override
     def __repr__(self) -> str:
         """String representation for debugging."""
         return f"<Session(id={self.id}, user_id={self.user_id}, token='{self.token[:8]}...', expires_at={self.expires_at})>"
