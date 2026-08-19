@@ -37,10 +37,7 @@ from app.schemas import (
     VerifyResponse,
 )
 from app.services.auth_dispatcher import send_verification_code
-from app.services.check_call_service import (
-    initiate_check_call,
-    simulate_incoming_call,
-)
+from app.services.check_call_service import initiate_check_call, simulate_incoming_call
 from app.services.crud import create_user, get_user_by_phone
 from app.services.session_service import create_session, delete_session
 from app.services.sms_service import verify_sms_code
