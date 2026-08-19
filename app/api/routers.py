@@ -15,10 +15,12 @@ import csv
 import hashlib
 import io
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Annotated, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -54,7 +56,7 @@ COOKIE_PATH = "/"
 
 
 @router.get("/", response_class=HTMLResponse)
-async def root(request: Request):
+async def root(request: Request) -> Response:
     """
     Root endpoint - serves the main registration page.
 
@@ -64,14 +66,14 @@ async def root(request: Request):
     Returns:
         Rendered HTML template for the registration page
     """
-    return request.state.templates.TemplateResponse("index.html", {
-        "request": request,
-        "auth_method": settings.AUTH_METHOD
-    })
+    templates = cast(Jinja2Templates, request.state.templates)
+    return templates.TemplateResponse(
+        "index.html", {"request": request, "auth_method": settings.AUTH_METHOD}
+    )
 
 
 @router.get("/splash", response_class=HTMLResponse)
-async def splash_page(request: Request):
+async def splash_page(request: Request) -> Response:
     """
     Splash screen for PWA - displayed when app is launched from home screen.
 
@@ -81,11 +83,12 @@ async def splash_page(request: Request):
     Returns:
         Rendered splash screen HTML template
     """
-    return request.state.templates.TemplateResponse("splash.html", {"request": request})
+    templates = cast(Jinja2Templates, request.state.templates)
+    return templates.TemplateResponse("splash.html", {"request": request})
 
 
 @router.get("/verify", response_class=HTMLResponse)
-async def verify_page(request: Request):
+async def verify_page(request: Request) -> Response:
     """
     Verification page - SMS code input.
 
@@ -95,7 +98,8 @@ async def verify_page(request: Request):
     Returns:
         Rendered HTML template for the verification page
     """
-    return request.state.templates.TemplateResponse(
+    templates = cast(Jinja2Templates, request.state.templates)
+    return templates.TemplateResponse(
         "verify.html",
         {
             "request": request,
@@ -110,11 +114,11 @@ async def verify_page(request: Request):
 @router.get("/admin", response_class=HTMLResponse)
 async def admin_panel(
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
     search: str | None = None,
     page: int = 1,
     per_page: int = 50,
-):
+) -> Response:
     """
     Admin panel - displays list of all users with pagination and search.
 
@@ -158,7 +162,8 @@ async def admin_panel(
     verified_result = await db.execute(verified_stmt)
     verified_count = verified_result.scalar() or 0
 
-    return request.state.templates.TemplateResponse(
+    templates = cast(Jinja2Templates, request.state.templates)
+    return templates.TemplateResponse(
         "admin.html",
         {
             "request": request,
@@ -175,7 +180,9 @@ async def admin_panel(
 
 
 @router.get("/admin/export")
-async def export_users(_request: Request, db: AsyncSession = Depends(get_async_db)):
+async def export_users(
+    _request: Request, db: Annotated[AsyncSession, Depends(get_async_db)]
+):
     """
     Export all users to CSV file.
 
@@ -219,7 +226,9 @@ async def export_users(_request: Request, db: AsyncSession = Depends(get_async_d
 
 
 @router.get("/card/{phone}", response_class=HTMLResponse)
-async def card_page(request: Request, phone: str, db: AsyncSession = Depends(get_async_db)):
+async def card_page(
+    request: Request, phone: str, db: Annotated[AsyncSession, Depends(get_async_db)]
+) -> Response:
     """
     Display user's loyalty card with QR code.
 
@@ -238,7 +247,8 @@ async def card_page(request: Request, phone: str, db: AsyncSession = Depends(get
 
     if not user.is_verified:
         # Redirect to verification page if not verified
-        return request.state.templates.TemplateResponse(
+        templates = cast(Jinja2Templates, request.state.templates)
+        return templates.TemplateResponse(
             "verify.html",
             {
                 "request": request,
@@ -249,7 +259,8 @@ async def card_page(request: Request, phone: str, db: AsyncSession = Depends(get
             },
         )
 
-    return request.state.templates.TemplateResponse(
+    templates = cast(Jinja2Templates, request.state.templates)
+    return templates.TemplateResponse(
         "card.html",
         {"request": request, "user": user},
     )
@@ -259,7 +270,9 @@ async def card_page(request: Request, phone: str, db: AsyncSession = Depends(get
 
 
 @router.post("/api/register", response_model=UserOut)
-async def register(user_data: UserCreate, db: AsyncSession = Depends(get_async_db)):
+async def register(
+    user_data: UserCreate, db: Annotated[AsyncSession, Depends(get_async_db)]
+):
     """
     Register new user or return existing user data.
 
@@ -299,7 +312,7 @@ async def register(user_data: UserCreate, db: AsyncSession = Depends(get_async_d
 async def initiate_auth_endpoint(
     sms_data: SMSRequest,
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Универсальный эндпоинт для инициации любой авторизации (SMS, Flash Call, Check Call).
@@ -353,7 +366,9 @@ async def initiate_auth_endpoint(
 
     # Save verification data to database
     user.sms_code = code
-    user.sms_code_expires_at = datetime.utcnow() + timedelta(minutes=5)
+    user.sms_code_expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(
+        minutes=5
+    )
 
     await db.commit()
 
@@ -365,7 +380,7 @@ async def initiate_auth_endpoint(
 async def send_sms_endpoint_deprecated(
     sms_data: SMSRequest,
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """Deprecated: используйте /api/auth/initiate вместо этого."""
     return await initiate_auth_endpoint(sms_data, request, db)
@@ -375,7 +390,7 @@ async def send_sms_endpoint_deprecated(
 async def verify_code(
     verify_data: UserVerify,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Verify SMS code and activate user account.
@@ -438,7 +453,7 @@ async def verify_code(
 async def login(
     sms_data: SMSRequest,
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Login by phone number.
@@ -490,7 +505,9 @@ async def login(
 
 
 @router.post("/api/auth/webhook/sms-ru")
-async def sms_ru_webhook(request: Request, db: AsyncSession = Depends(get_async_db)):
+async def sms_ru_webhook(
+    request: Request, db: Annotated[AsyncSession, Depends(get_async_db)]
+):
     """
     Webhook endpoint for SMS.ru Check Call notifications.
 
@@ -575,7 +592,8 @@ async def sms_ru_webhook(request: Request, db: AsyncSession = Depends(get_async_
         # Always return 100 to confirm receipt (SMS.ru requirement)
         return PlainTextResponse(content="100")
 
-    except Exception:
+    except Exception as e:
+        logger.error(f"[WEBHOOK] Error processing SMS.ru webhook: {e!s}")
         return PlainTextResponse(content="100")
 
 
@@ -583,7 +601,7 @@ async def sms_ru_webhook(request: Request, db: AsyncSession = Depends(get_async_
 async def simulate_call_endpoint(
     sms_data: SMSRequest,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Симуляция входящего звонка в тестовом режиме (SMS_TEST_MODE=True).
@@ -649,7 +667,7 @@ async def simulate_call_endpoint(
 async def check_call_status(
     phone: str,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Check verification status for Check Call method (polling endpoint).
@@ -735,7 +753,10 @@ async def check_call_status(
         return {"verified": False, "status": "none"}
 
     # Check if check_id is expired
-    if user.sms_code_expires_at and datetime.utcnow() > user.sms_code_expires_at:
+    if (
+        user.sms_code_expires_at
+        and datetime.now(timezone.utc).replace(tzinfo=None) > user.sms_code_expires_at
+    ):
         return {"verified": False, "status": "expired"}
 
     # Still waiting for webhook confirmation (sms_check_id exists, is_verified may be old value)
@@ -746,7 +767,7 @@ async def check_call_status(
 async def simulate_check_call(
     phone: str,
     response: Response,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Simulate incoming check call in test mode (emulates SMS.ru webhook).
@@ -818,7 +839,7 @@ async def simulate_check_call(
 @router.post("/api/logout")
 async def logout(
     request: Request,
-    db: AsyncSession = Depends(get_async_db),
+    db: Annotated[AsyncSession, Depends(get_async_db)],
 ):
     """
     Logout user (delete session).
@@ -840,7 +861,7 @@ async def logout(
 
     if token:
         # Delete session from database
-        await delete_session(db, token)
+        _ = await delete_session(db, token)
 
     # Create response with cookie cleared
     response = Response(content='{"success": true}')
@@ -858,8 +879,8 @@ async def logout(
 @router.get("/api/me", response_model=UserOut)
 async def get_current_user(
     request: Request,
-    _db: AsyncSession = Depends(get_async_db),
-):
+    _db: Annotated[AsyncSession, Depends(get_async_db)],
+) -> User:
     """
     Get current authenticated user.
 
@@ -891,7 +912,7 @@ async def get_current_user(
         }
     """
     # Get user from request.state (injected by middleware)
-    user = request.state.current_user
+    user = cast(User | None, getattr(request.state, "current_user", None))
 
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
