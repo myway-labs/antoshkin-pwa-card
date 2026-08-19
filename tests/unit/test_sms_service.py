@@ -4,12 +4,12 @@ Unit tests for sms_service.py
 Tests SMS code generation, sending, and verification functions.
 """
 
-import pytest
 from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from sqlalchemy.ext.asyncio import AsyncSession
+import pytest
 from _pytest.monkeypatch import MonkeyPatch
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import User
 from app.services.sms_service import (
