@@ -12,7 +12,6 @@ Provides async database operations for user management:
 """
 
 from datetime import datetime, timezone
-from typing import cast
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
