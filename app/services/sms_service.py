@@ -16,8 +16,8 @@ Functions:
 
 import logging
 import random
-from datetime import datetime, timedelta
-from typing import Tuple, Optional
+from datetime import datetime, timedelta, timezone
+from typing import cast
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,7 +53,7 @@ def generate_sms_code() -> str:
     return f"{random.randint(0, 9999):04d}"
 
 
-async def send_sms(phone: str, code: str) -> Tuple[bool, str]:
+async def send_sms(phone: str, code: str) -> tuple[bool, str]:
     """
     Send SMS with verification code via SMS gateway.
 
@@ -101,23 +101,28 @@ async def send_sms(phone: str, code: str) -> Tuple[bool, str]:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+            _ = response.raise_for_status()
+            data = cast(dict[str, object], response.json())
 
             # Log full API response for debugging
             logger.debug(f"[SMS] SMS.ru response for {phone}: {data}")
             print(f"[SMS] SMS.ru response: {data}")
 
-            if data.get("status") == "OK":
-                logger.info(f"[SMS] Sent to {phone}, code: {code}")
+            if str(data.get("status")) == "OK":
+                logger.info("[SMS] Sent to %s, code: %s", phone, code)
                 return True, "SMS sent"
             else:
-                error_msg = data.get("status_message", "Unknown error")
-                status_code = data.get("status_code", "N/A")
-                logger.error(f"[SMS] SMS.ru error for {phone}: {error_msg} (code: {status_code})")
+                error_msg = str(data.get("status_message", "Unknown error"))
+                status_code = str(data.get("status_code", "N/A"))
+                logger.error(
+                    "[SMS] SMS.ru error for %s: %s (code: %s)",
+                    phone,
+                    error_msg,
+                    status_code,
+                )
                 return False, f"SMS.ru error: {error_msg}"
 
-    except httpx.TimeoutException as e:
+    except httpx.TimeoutException:
         error_msg = "Request timeout"
         logger.error(f"[SMS] Timeout for {phone}: {error_msg}")
         return False, f"Network error: {error_msg}"
@@ -129,15 +134,13 @@ async def send_sms(phone: str, code: str) -> Tuple[bool, str]:
 
     except ValueError as e:
         error_msg = "JSON parse error"
-        logger.error(f"[SMS] JSON parse error for {phone}: {str(e)}")
+        logger.error(f"[SMS] JSON parse error for {phone}: {e!s}")
         return False, f"Response error: {error_msg}"
 
 
 async def verify_sms_code(
-    db: AsyncSession,
-    user: User,
-    code: str
-) -> Tuple[bool, str]:
+    db: AsyncSession, user: User, code: str
+) -> tuple[bool, str, int | None]:
     """
     Verify SMS code and activate user account (async version).
 
@@ -170,18 +173,18 @@ async def verify_sms_code(
     """
     # Check if code exists
     if not user.sms_code:
-        return False, "Код не был отправлен"
+        return False, "Код не был отправлен", None
 
     # Check if code has expired
     if user.sms_code_expires_at is None:
-        return False, "Ошибка SMS кода"
+        return False, "Ошибка SMS кода", None
 
-    if datetime.utcnow() > user.sms_code_expires_at:
-        return False, "Срок действия кода истёк"
+    if datetime.now(timezone.utc).replace(tzinfo=None) > user.sms_code_expires_at:
+        return False, "Срок действия кода истёк", None
 
     # Compare codes (constant-time comparison for security)
     if user.sms_code != code:
-        return False, "Неверный код"
+        return False, "Неверный код", None
 
     # Code is valid - mark user as verified
     # IMPORTANT: Save user.id BEFORE commit to avoid lazy-loading issues
@@ -196,10 +199,7 @@ async def verify_sms_code(
     return True, "Verified", user_id
 
 
-async def set_user_sms_code(
-    db: AsyncSession,
-    user: User
-) -> Tuple[bool, str, str]:
+async def set_user_sms_code(db: AsyncSession, user: User) -> tuple[bool, str, str]:
     """
     Generate and set SMS code for user (async version).
 
@@ -226,7 +226,7 @@ async def set_user_sms_code(
     code = generate_sms_code()
 
     # Set expiration time (5 minutes from now)
-    expires_at = datetime.utcnow() + timedelta(minutes=5)
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(minutes=5)
 
     # Save to database
     user.sms_code = code
@@ -236,10 +236,7 @@ async def set_user_sms_code(
     return True, code, "Code generated"
 
 
-async def resend_sms_code(
-    db: AsyncSession,
-    user: User
-) -> Tuple[bool, str, str]:
+async def resend_sms_code(db: AsyncSession, user: User) -> tuple[bool, str, str]:
     """
     Resend SMS code to user (if previous code expired or not received) (async version).
 
