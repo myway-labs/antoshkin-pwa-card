@@ -539,11 +539,13 @@ async def sms_ru_webhook(
         # Each entry is multi-line text: type\ncheck_id\nstatus\ntimestamp
         api_id = settings.SMS_API_KEY  # Your SMS_API_KEY from SMS.ru
 
-        # Collect all data entries for hash validation
-        data_entries: list[str] = []
-        for key, value in form_data.items():
-            if key.startswith("data["):
-                data_entries.append(str(value))
+        # Collect all data entries for hash validation, sorted by index
+        # SMS.ru sends data in data[1], data[2], ... format. Order is critical for hash.
+        data_keys = sorted(
+            [k for k in form_data.keys() if k.startswith("data[")],
+            key=lambda x: int(x[5:-1]) if x[5:-1].isdigit() else 0,
+        )
+        data_entries: list[str] = [str(form_data[k]) for k in data_keys]
 
         # Validate hash if present
         if "hash" in form_data and data_entries:
