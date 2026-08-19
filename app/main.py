@@ -38,20 +38,21 @@ app.add_middleware(SessionAuthMiddleware)
 # Configure static files (CSS, JS, images, manifest)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Получаем путь к папке, где лежит этот файл (main.py)
+# Base and static directories resolution
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STATIC_DIR = os.path.join(BASE_DIR, "static")
 
 @app.get("/favicon.ico", include_in_schema=False)
 async def favicon():
-    return FileResponse(os.path.join(BASE_DIR, "favicon.ico"))
+    return FileResponse(os.path.join(STATIC_DIR, "favicon.ico"))
 
 @app.get("/apple-touch-icon.png", include_in_schema=False)
 async def apple_touch():
-    return FileResponse(os.path.join(BASE_DIR, "apple-touch-icon.png"))
+    return FileResponse(os.path.join(STATIC_DIR, "apple-touch-icon.png"))
 
 @app.get("/apple-touch-icon-precomposed.png", include_in_schema=False)
 async def apple_touch_precomposed():
-    return FileResponse(os.path.join(BASE_DIR, "apple-touch-icon-precomposed.png"))
+    return FileResponse(os.path.join(STATIC_DIR, "apple-touch-icon-precomposed.png"))
 
 @app.get("/robots.txt", include_in_schema=False)
 async def robots():
