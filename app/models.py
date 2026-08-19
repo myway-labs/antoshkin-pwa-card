@@ -9,7 +9,7 @@ Each class represents a table, each attribute represents a column.
 
 import secrets
 from datetime import datetime, timedelta, timezone
-from typing import Any, override
+from typing import override
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
