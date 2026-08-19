@@ -7,6 +7,22 @@
 Система цифровых дисконтных карт для цветочного комбината [https://card.rassada1.ru/](https://card.rassada1.ru)
 
 ---
+
+<table>
+  <tr>
+    <td><img src="static/IMG_7698.PNG" width="200" alt="Screen 1"></td>
+    <td><img src="static/IMG_7699.PNG" width="200" alt="Screen 2"></td>
+    <td><img src="static/IMG_7700.PNG" width="200" alt="Screen 3"></td>
+    <td><img src="static/IMG_7701.PNG" width="200" alt="Screen 4"></td>
+    <td><img src="static/IMG_7702.PNG" width="200" alt="Screen 5"></td>
+  </tr>
+</table>
+
+---
+
+<details>
+  <summary> Авторизация по смс, скриншоты (v1.0.0)</summary>
+    
 <table>
   <tr>
     <td><img src="https://github.com/user-attachments/assets/cf82507b-5597-443b-a98b-06d9bb502b0f" width="300"></td>
@@ -14,7 +30,10 @@
     <td><img src="https://github.com/user-attachments/assets/b18c224c-a2e8-4c2f-96c6-657c08710beb" width="300"></td>
   </tr>
 </table>
----
+
+</details>
+
+
 
 ## 📱 О проекте
 

@@ -5,7 +5,7 @@
 {% block title %}Моя карта - Антошкин дворик{% endblock %}
 
 {% block content %}
-<div class="min-h-screen flex flex-col px-6 py-12 lg:px-8 safe-top bg-gray-100">
+<div class="min-h-screen flex flex-col px-6 py-12 lg:px-8 safe-top">
     <!-- Header -->
     <div class="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
         <h1 class="text-3xl font-bold text-gray-900">
@@ -63,11 +63,11 @@
             <!-- Card Header -->
             <div class="bg-[#7A9F2A] bg-opacity-50 px-6 py-4">
                 <div class="flex items-center justify-between">
-                    <h2 class="text-white text-lg font-semibold">
+                    <h2 class="text-white text-md font-semibold">
                         Антошкин дворик
                     </h2>
-                    <span class="text-green-100 text-xs">
-                        Карта лояльности
+                    <span class="text-white text-md font-light">
+                        карта лояльности
                     </span>
                 </div>
             </div>
@@ -75,20 +75,31 @@
             <!-- Card Body -->
             <div class="px-6 py-6">
                 <!-- Card Mockup Image -->
-                <div class="mb-4">
-                    <img
-                        src="/static/card-mockup.png"
-                        alt="Скидочная карта Антошкин дворик"
-                        class="w-full h-auto rounded-lg shadow-md"
-                    >
+                <div class="mb-4 flip-card-container">
+                    <div class="flip-card" id="loyaltyCard">
+                        <div class="flip-card-front">
+                            <img
+                                src="/static/card-mockup-1312x800.png"
+                                alt="Скидочная карта Антошкин дворик"
+                                class="w-full h-auto rounded-lg shadow-md"
+                            >
+                        </div>
+                        <div class="flip-card-back">
+                            <img
+                                src="/static/card-back-1312x800.png"
+                                alt="Обратная сторона карты"
+                                class="w-full h-auto rounded-lg shadow-md"
+                            >
+                        </div>
+                    </div>
                 </div>
 
                 <!-- User Info (left: name, right: phone) -->
                 <div class="flex justify-between items-center mb-6 px-0">
-                    <p class="text-white text-base font-light" id="userName">
+                    <p class="text-white text-md font-light" id="userName">
                         {{ user.full_name }}
                     </p>
-                    <p class="text-white text-base font-light" id="userPhone">
+                    <p class="text-white text-md font-light" id="userPhone">
                         {{ user.phone }}
                     </p>
                 </div>
@@ -104,7 +115,7 @@
 
             <!-- Card Footer -->
             <div class="bg-[#7A9F2A] bg-opacity-30 px-6 py-4">
-                <p class="text-green-100 text-xs text-center">
+                <p class="text-white text-xs text-center">
                     Действует во всех магазинах сети
                 </p>
             </div>
@@ -152,6 +163,65 @@
      data-user-phone="{{ user.phone }}"
      class="hidden">
 </div>
+
+<style>
+/* Flip card animation styles */
+.flip-card-container {
+    perspective: 1000px;
+    width: 100%;
+    /* aspect-ratio для сохранения пропорций изображения (1312x800 ≈ 1.64) 1313 подгонка */
+    aspect-ratio: 1314 / 800;
+    max-height: 260px; /* Ограничиваем высоту как в оригинале */
+    margin: 0 auto;
+    position: relative;
+}
+
+.flip-card {
+    width: 100%;
+    height: 100%; /* Занимает всю высоту контейнера */
+    position: relative;
+    cursor: pointer;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+    display: block;
+    /* margin-bottom удален, так как у родителя есть класс mb-4 */
+}
+
+.flip-card.flipped {
+    transform: rotateY(180deg);
+}
+
+.flip-card-front, .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 0.5rem;
+    overflow: hidden;           /* ← ДОБАВИТЬ: обрезка по радиусу на уровне контейнера */
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    top: 0;
+    left: 0;
+}
+
+.flip-card-front {
+    z-index: 2;
+    transform: rotateY(0deg);
+}
+
+.flip-card-back {
+    transform: rotateY(180deg);
+    z-index: 1;
+}
+
+/* Ensure images maintain original size without cropping */
+.flip-card-front img, .flip-card-back img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 0rem;
+    display: block;
+}
+</style>
 
 <script>
     // Get user data from data attributes (safer for VS Code syntax highlighting)
@@ -321,6 +391,19 @@
         
         // Show card content (if not redirected by checkSession)
         showCard();
+        
+        // Initialize flip card animation
+        initFlipCard();
     });
+    
+    // Flip card animation initialization
+    function initFlipCard() {
+        const flipCard = document.getElementById('loyaltyCard');
+        if (flipCard) {
+            flipCard.addEventListener('click', function() {
+                this.classList.toggle('flipped');
+            });
+        }
+    }
 </script>
 {% endblock %}

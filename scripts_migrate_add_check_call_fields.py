@@ -8,7 +8,7 @@ This script safely adds new columns to the users table:
 - is_privacy_accepted (Boolean, default False)
 - is_subscribed (Boolean, default False)
 
-The migration is safe for existing 
+The migration is safe for existing
 - All new columns are nullable or have default values
 - Existing user records are not modified
 - No data loss occurs
@@ -29,11 +29,12 @@ from pathlib import Path
 def get_db_path() -> str:
     """Get database path from environment or use default."""
     import os
-    db_url = os.getenv('DATABASE_URL', 'sqlite:///./loyalty.db')
+
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./loyalty.db")
     # Extract path from SQLite URL
-    if db_url.startswith('sqlite:///'):
-        return db_url.replace('sqlite:///', '')
-    return './loyalty.db'
+    if db_url.startswith("sqlite:///"):
+        return db_url.replace("sqlite:///", "")
+    return "./loyalty.db"
 
 
 def column_exists(cursor, table_name, column_name) -> bool:
@@ -51,7 +52,7 @@ def migrate():
 
     # Check if database file exists
     if not Path(db_path).exists():
-        print(f"[MIGRATION] Database file not found. Will be created on first run.")
+        print("[MIGRATION] Database file not found. Will be created on first run.")
         return
 
     # Connect to database
@@ -60,17 +61,15 @@ def migrate():
 
     try:
         # Add sms_check_id column
-        if not column_exists(cursor, 'users', 'sms_check_id'):
+        if not column_exists(cursor, "users", "sms_check_id"):
             print("[MIGRATION] Adding column: sms_check_id")
-            cursor.execute(
-                "ALTER TABLE users ADD COLUMN sms_check_id VARCHAR(50)"
-            )
+            cursor.execute("ALTER TABLE users ADD COLUMN sms_check_id VARCHAR(50)")
             print("  ✓ Column sms_check_id added")
         else:
             print("[MIGRATION] Column sms_check_id already exists")
 
         # Add is_privacy_accepted column
-        if not column_exists(cursor, 'users', 'is_privacy_accepted'):
+        if not column_exists(cursor, "users", "is_privacy_accepted"):
             print("[MIGRATION] Adding column: is_privacy_accepted")
             cursor.execute(
                 "ALTER TABLE users ADD COLUMN is_privacy_accepted BOOLEAN DEFAULT 0"
@@ -80,7 +79,7 @@ def migrate():
             print("[MIGRATION] Column is_privacy_accepted already exists")
 
         # Add is_subscribed column
-        if not column_exists(cursor, 'users', 'is_subscribed'):
+        if not column_exists(cursor, "users", "is_subscribed"):
             print("[MIGRATION] Adding column: is_subscribed")
             cursor.execute(
                 "ALTER TABLE users ADD COLUMN is_subscribed BOOLEAN DEFAULT 0"
