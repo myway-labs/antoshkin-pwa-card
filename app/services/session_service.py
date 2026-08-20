@@ -13,9 +13,9 @@ Token is never exposed to JavaScript (XSS protection).
 """
 
 import secrets
-from datetime import datetime, timedelta
-from typing import Optional
-from sqlalchemy import select, func
+from datetime import datetime, timedelta, timezone
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Session
@@ -37,7 +37,7 @@ async def create_session(db: AsyncSession, user_id: int, expires_in_days: int = 
     token = secrets.token_urlsafe(32)
 
     # Calculate expiration time
-    expires_at = datetime.utcnow() + timedelta(days=expires_in_days)
+    expires_at = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=expires_in_days)
 
     # Create session object
     db_session = Session(
@@ -54,7 +54,7 @@ async def create_session(db: AsyncSession, user_id: int, expires_in_days: int = 
     return token
 
 
-async def get_session_by_token(db: AsyncSession, token: str) -> Optional[Session]:
+async def get_session_by_token(db: AsyncSession, token: str) -> Session | None:
     """
     Retrieve session by token.
 
@@ -105,7 +105,7 @@ async def cleanup_expired_sessions(db: AsyncSession) -> int:
     Returns:
         Number of sessions deleted
     """
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
 
     result = await db.execute(
         select(func.count()).select_from(Session).where(
@@ -114,8 +114,8 @@ async def cleanup_expired_sessions(db: AsyncSession) -> int:
     )
     count = result.scalar() or 0
 
-    await db.execute(
-        Session.__table__.delete().where(
+    _ = await db.execute(
+        delete(Session).where(
             Session.expires_at < now
         )
     )
@@ -142,8 +142,8 @@ async def delete_all_user_sessions(db: AsyncSession, user_id: int) -> int:
     )
     count = result.scalar() or 0
 
-    await db.execute(
-        Session.__table__.delete().where(
+    _ = await db.execute(
+        delete(Session).where(
             Session.user_id == user_id
         )
     )

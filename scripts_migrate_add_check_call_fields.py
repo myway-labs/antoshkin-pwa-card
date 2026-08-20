@@ -24,6 +24,7 @@ Note:
 
 import sqlite3
 from pathlib import Path
+from typing import Any
 
 
 def get_db_path() -> str:
@@ -37,10 +38,10 @@ def get_db_path() -> str:
     return "./loyalty.db"
 
 
-def column_exists(cursor, table_name, column_name) -> bool:
+def column_exists(cursor: sqlite3.Cursor, table_name: str, column_name: str) -> bool:
     """Check if a column exists in a table."""
     cursor.execute(f"PRAGMA table_info({table_name})")
-    columns = [row[1] for row in cursor.fetchall()]
+    columns: list[str] = [row[1] for row in cursor.fetchall()]
     return column_name in columns
 
 
@@ -94,7 +95,8 @@ def migrate():
 
         # Show summary
         cursor.execute("SELECT COUNT(*) FROM users")
-        user_count = cursor.fetchone()[0]
+        result = cursor.fetchone()
+        user_count = result[0] if result else 0
         print(f"[MIGRATION] Total users in database: {user_count}")
 
     except Exception as e:

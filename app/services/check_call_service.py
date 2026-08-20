@@ -12,8 +12,8 @@ Functions:
 """
 
 import logging
-from datetime import datetime, timedelta
-from typing import Tuple, Optional
+from datetime import datetime, timedelta, timezone
+from typing import cast
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,10 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 async def initiate_check_call(
-    db: AsyncSession,
-    user: User,
-    phone: str
-) -> Tuple[bool, str, str, Optional[str]]:
+    _db: AsyncSession, user: User, phone: str
+) -> tuple[bool, str, str, str | None]:
     """
     Initiate Check Call verification via SMS.ru API.
 
@@ -92,30 +90,42 @@ async def initiate_check_call(
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, params=params, timeout=10.0)
-                response.raise_for_status()
-                data = response.json()
+                _ = response.raise_for_status()
+                data = cast(dict[str, object], response.json())
 
-                if data.get("status") == "OK":
-                    real_check_id = data.get("check_id")
-                    call_phone = data.get("call_phone")
-                    logger.info(f"[CHECK_CALL] Got real check_id {real_check_id} in test mode")
+                if str(data.get("status")) == "OK":
+                    real_check_id = str(data.get("check_id", ""))
+                    call_phone = cast(str | None, data.get("call_phone"))
+                    logger.info(
+                        "[CHECK_CALL] Got real check_id %s in test mode", real_check_id
+                    )
                     print(f"[CHECK_CALL] SMS.ru response (test mode): {data}")
 
                     # Save real check_id and expiration (DO NOT commit here)
                     # Do NOT auto-verify — wait for simulate_check_call endpoint
                     user.sms_check_id = real_check_id
-                    user.sms_code_expires_at = datetime.utcnow() + timedelta(minutes=5)
+                    user.sms_code_expires_at = datetime.now(timezone.utc).replace(
+                        tzinfo=None
+                    ) + timedelta(minutes=5)
                     # is_verified remains False until simulate_check_call is invoked
 
-                    logger.info(f"[CHECK_CALL] Test mode: check_id saved for {user.phone}, waiting for call simulation")
-                    return True, real_check_id, "Check call initiated (test mode)", call_phone
+                    logger.info(
+                        "[CHECK_CALL] Test mode: check_id saved for %s, waiting for call simulation",
+                        user.phone,
+                    )
+                    return (
+                        True,
+                        real_check_id,
+                        "Check call initiated (test mode)",
+                        call_phone,
+                    )
                 else:
-                    error_msg = data.get("status_text", "Unknown error")
-                    logger.error(f"[CHECK_CALL] SMS.ru error in test mode: {error_msg}")
+                    error_msg = str(data.get("status_text", "Unknown error"))
+                    logger.error("[CHECK_CALL] SMS.ru error in test mode: %s", error_msg)
                     return False, "", f"SMS.ru error: {error_msg}", None
         except Exception as e:
-            logger.error(f"[CHECK_CALL] Request error in test mode: {str(e)}")
-            return False, "", f"Network error: {str(e)}", None
+            logger.error(f"[CHECK_CALL] Request error in test mode: {e!s}")
+            return False, "", f"Network error: {e!s}", None
 
     # Production mode: request check call via SMS.ru API using httpx
     url = "https://sms.ru/callcheck/add"
@@ -128,36 +138,43 @@ async def initiate_check_call(
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+            _ = response.raise_for_status()
+            data = cast(dict[str, object], response.json())
 
             # Log full API response for debugging
-            logger.debug(f"[CHECK_CALL] SMS.ru response for {phone}: {data}")
+            logger.debug("[CHECK_CALL] SMS.ru response for %s: %s", phone, data)
             print(f"[CHECK_CALL] SMS.ru response: {data}")
 
-            if data.get("status") == "OK":
-                check_id = data.get("check_id")
-                call_phone = data.get("call_phone")
-                call_phone_pretty = data.get("call_phone_pretty", call_phone)
+            if str(data.get("status")) == "OK":
+                check_id = str(data.get("check_id", ""))
+                call_phone = cast(str | None, data.get("call_phone"))
+                call_phone_pretty = str(data.get("call_phone_pretty", call_phone))
 
                 # Update user with check_id for webhook verification (DO NOT commit here)
                 user.sms_check_id = check_id
-                user.sms_code_expires_at = datetime.utcnow() + timedelta(minutes=5)
+                user.sms_code_expires_at = datetime.now(timezone.utc).replace(
+                    tzinfo=None
+                ) + timedelta(minutes=5)
 
                 logger.info(
-                    f"[CHECK_CALL] Initiated for {phone}, "
-                    f"check_id: {check_id}, call_phone: {call_phone_pretty}"
+                    "[CHECK_CALL] Initiated for %s, check_id: %s, call_phone: %s",
+                    phone,
+                    check_id,
+                    call_phone_pretty,
                 )
                 return True, check_id, "Check call initiated", call_phone
             else:
-                error_msg = data.get("status_text", "Unknown error")
-                status_code = data.get("status_code", "N/A")
+                error_msg = str(data.get("status_text", "Unknown error"))
+                status_code = str(data.get("status_code", "N/A"))
                 logger.error(
-                    f"[CHECK_CALL] SMS.ru error for {phone}: {error_msg} (code: {status_code})"
+                    "[CHECK_CALL] SMS.ru error for %s: %s (code: %s)",
+                    phone,
+                    error_msg,
+                    status_code,
                 )
                 return False, "", f"SMS.ru error: {error_msg}", None
 
-    except httpx.TimeoutException as e:
+    except httpx.TimeoutException:
         error_msg = "Request timeout"
         logger.error(f"[CHECK_CALL] Timeout for {phone}: {error_msg}")
         return False, "", f"Network error: {error_msg}", None
@@ -169,11 +186,11 @@ async def initiate_check_call(
 
     except ValueError as e:
         error_msg = "JSON parse error"
-        logger.error(f"[CHECK_CALL] JSON parse error for {phone}: {str(e)}")
+        logger.error(f"[CHECK_CALL] JSON parse error for {phone}: {e!s}")
         return False, "", f"Response error: {error_msg}", None
 
 
-async def verify_check_call_status(check_id: str) -> Tuple[bool, str, str]:
+async def verify_check_call_status(check_id: str) -> tuple[bool, str, str]:
     """
     Verify Check Call status via SMS.ru API (optional polling method).
 
@@ -230,30 +247,36 @@ async def verify_check_call_status(check_id: str) -> Tuple[bool, str, str]:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(url, params=params, timeout=10.0)
-            response.raise_for_status()
-            data = response.json()
+            _ = response.raise_for_status()
+            data = cast(dict[str, object], response.json())
 
             # Log full API response for debugging
-            logger.debug(f"[CHECK_CALL] Status response for {check_id}: {data}")
+            logger.debug("[CHECK_CALL] Status response for %s: %s", check_id, data)
             print(f"[CHECK_CALL] Status response: {data}")
 
-            if data.get("status") == "OK":
-                check_status = data.get("check_status")
-                check_status_text = data.get("check_status_text", "Unknown status")
+            if str(data.get("status")) == "OK":
+                check_status = str(data.get("check_status", ""))
+                check_status_text = str(data.get("check_status_text", "Unknown status"))
 
                 logger.info(
-                    f"[CHECK_CALL] Status for {check_id}: {check_status} - {check_status_text}"
+                    "[CHECK_CALL] Status for %s: %s - %s",
+                    check_id,
+                    check_status,
+                    check_status_text,
                 )
                 return True, check_status, check_status_text
             else:
-                error_msg = data.get("status_text", "Unknown error")
-                status_code = data.get("status_code", "N/A")
+                error_msg = str(data.get("status_text", "Unknown error"))
+                status_code = str(data.get("status_code", "N/A"))
                 logger.error(
-                    f"[CHECK_CALL] SMS.ru status error for {check_id}: {error_msg} (code: {status_code})"
+                    "[CHECK_CALL] SMS.ru status error for %s: %s (code: %s)",
+                    check_id,
+                    error_msg,
+                    status_code,
                 )
                 return False, "", f"SMS.ru error: {error_msg}"
 
-    except httpx.TimeoutException as e:
+    except httpx.TimeoutException:
         error_msg = "Request timeout"
         logger.error(f"[CHECK_CALL] Timeout for {check_id}: {error_msg}")
         return False, "", f"Network error: {error_msg}"
@@ -265,15 +288,13 @@ async def verify_check_call_status(check_id: str) -> Tuple[bool, str, str]:
 
     except ValueError as e:
         error_msg = "JSON parse error"
-        logger.error(f"[CHECK_CALL] JSON parse error for {check_id}: {str(e)}")
+        logger.error(f"[CHECK_CALL] JSON parse error for {check_id}: {e!s}")
         return False, "", f"Response error: {error_msg}"
 
 
 async def simulate_incoming_call(
-    db: AsyncSession,
-    user: User,
-    phone: str
-) -> Tuple[bool, str]:
+    _db: AsyncSession, user: User, phone: str
+) -> tuple[bool, str]:
     """
     Simulate incoming check call webhook in test mode.
 

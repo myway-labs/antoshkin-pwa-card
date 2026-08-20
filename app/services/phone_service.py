@@ -16,7 +16,6 @@ Functions:
 """
 
 import re
-from typing import Optional
 
 
 def normalize_phone(phone: str) -> str:
@@ -102,10 +101,7 @@ def validate_phone(phone: str) -> bool:
         # Optional: Check if second digit is 9 (mobile numbers)
         # Most Russian mobile numbers start with 9
         # but some landlines may start with other digits
-        if normalized[2] not in '0123456789':
-            return False
-        
-        return True
+        return normalized[2] in "0123456789"
     
     except ValueError:
         return False

@@ -7,7 +7,9 @@ Loads settings from environment variables using pydantic-settings.
 All sensitive data (API keys, secrets) should be stored in .env file.
 """
 
-from pydantic_settings import BaseSettings
+from typing import ClassVar
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -37,11 +39,11 @@ class Settings(BaseSettings):
     # App Settings
     DEBUG: bool = True
 
-    class Config:
-        """Pydantic config for environment variable loading."""
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+    model_config: ClassVar[SettingsConfigDict] = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+    )
 
 
 # Global settings instance

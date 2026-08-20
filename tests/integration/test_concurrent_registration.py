@@ -88,9 +88,8 @@ class TestConcurrentRegistration:
 
         # First should succeed (200)
         assert results[0] == 200, "First verification should succeed"
-        # Subsequent requests also succeed (200) because user is already verified
-        # verify_sms_code() returns (True, "Already verified") for verified users
-        assert all(r == 200 for r in results[1:]), "Subsequent verifications should succeed (already verified)"
+        # Subsequent requests fail (400) because single-use OTP code was consumed and cleared
+        assert all(r == 400 for r in results[1:]), "Subsequent verifications should fail (OTP already consumed)"
 
         # User should be verified
         await db.refresh(test_user_unverified)

@@ -14,17 +14,17 @@ Important:
 - Safe for public routes (/, /admin, static files)
 """
 
-from datetime import datetime
-from typing import Callable
-from fastapi import Request
+from collections.abc import Awaitable, Callable
+from typing import override
+
+from fastapi import HTTPException, Request
 from fastapi.responses import Response
-from starlette.middleware.base import BaseHTTPMiddleware
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.database import AsyncSessionLocal
-from app.services.session_service import get_session_by_token
-from app.models import User, Session
+from app.models import Session, User
 
 
 class SessionAuthMiddleware(BaseHTTPMiddleware):
@@ -60,10 +60,11 @@ class SessionAuthMiddleware(BaseHTTPMiddleware):
         - Session is NOT deleted on expiration (routes handle this)
     """
 
+    @override
     async def dispatch(
         self,
         request: Request,
-        call_next: Callable
+        call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         """
         Process request and inject current_user.
@@ -88,39 +89,34 @@ class SessionAuthMiddleware(BaseHTTPMiddleware):
 
         # Create async database session
         async with AsyncSessionLocal() as db:
-            try:
-                # Find session by token with eager-loaded user (async)
-                result = await db.execute(
-                    select(Session)
-                    .options(selectinload(Session.user))
-                    .where(Session.token == token)
-                )
-                session = result.scalar_one_or_none()
+            # Find session by token with eager-loaded user (async)
+            result = await db.execute(
+                select(Session)
+                .options(selectinload(Session.user))
+                .where(Session.token == token)
+            )
+            session = result.scalar_one_or_none()
 
-                if not session:
-                    # Session not found in database - continue as anonymous
-                    return await call_next(request)
+            if not session:
+                # Session not found in database - continue as anonymous
+                return await call_next(request)
 
-                # Check if session is valid (not expired)
-                if not session.is_valid():
-                    # Session expired - continue as anonymous
-                    # Note: Not deleting session here (let routes handle cleanup)
-                    return await call_next(request)
+            # Check if session is valid (not expired)
+            if not session.is_valid():
+                # Session expired - continue as anonymous
+                # Note: Not deleting session here (let routes handle cleanup)
+                return await call_next(request)
 
-                # Session is valid - inject user (already loaded via selectinload)
-                request.state.current_user = session.user
-                request.state.is_authenticated = True
-
-            finally:
-                # Database session closed automatically by async context manager
-                pass
+            # Session is valid - inject user (already loaded via selectinload)
+            request.state.current_user = session.user
+            request.state.is_authenticated = True
 
         # Continue request processing with injected user
         return await call_next(request)
 
 
 # Convenience function for dependency injection
-async def get_current_user_optional(request: Request):
+async def get_current_user_optional(request: Request) -> User | None:
     """
     Dependency for optional authentication.
 
@@ -136,10 +132,11 @@ async def get_current_user_optional(request: Request):
                 return {"greeting": f"Hello, {user.full_name}"}
             return {"greeting": "Hello, guest"}
     """
-    return request.state.current_user
+    user: User | None = getattr(request.state, "current_user", None)
+    return user
 
 
-async def get_current_user_required(request: Request):
+async def get_current_user_required(request: Request) -> User:
     """
     Dependency for required authentication.
 
@@ -156,9 +153,7 @@ async def get_current_user_required(request: Request):
     Raises:
         HTTPException: 401 Unauthorized if not authenticated
     """
-    from fastapi import HTTPException
-
-    user = request.state.current_user
+    user: User | None = getattr(request.state, "current_user", None)
 
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")

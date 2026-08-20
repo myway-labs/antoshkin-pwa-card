@@ -41,7 +41,7 @@
 Совершить звонок на номер пользователя со случайного номера телефона.
 
 ```
-https://sms.ru/code/call?phone=79516677606&ip=33.22.11.55&api_id=cd531320-b159-f104-6d80-c9a2222e3c3e
+https://sms.ru/code/call?phone=795166776**&ip=33.22.11.55&api_id=********-b159-f104-6d80-c9a2222e3c3e
 ```
 
 ## Пример ответа
@@ -77,7 +77,7 @@ https://sms.ru/code/call?phone=79516677606&ip=33.22.11.55&api_id=cd531320-b159-f
 
 | Параметр | Обязательный | Описание |
 |----------|--------------|----------|
-| api_id | да | Авторизацию по вашему уникальному ключу (api_id). Этот способ авторизации - самый удобный и приведен в примере выше. Ваш api_id вы можете найти на главной странице личного кабинета: cd531320-b159-f104-6d80-c9a2222e3c3e |
+| api_id | да | Авторизацию по вашему уникальному ключу (api_id). Этот способ авторизации - самый удобный и приведен в примере выше. Ваш api_id вы можете найти на главной странице личного кабинета: ********-b159-f104-6d80-c9a2222e3c3e |
 
 ## Авторизация по звонку из PHP (со включенным модулем curl)
 
@@ -86,9 +86,9 @@ $ch = curl_init("https://sms.ru/code/call");
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query(array(
-    "phone" => "79516677606", // номер телефона пользователя
+    "phone" => "795166776**", // номер телефона пользователя
     "ip" => $_SERVER["REMOTE_ADDR"], // ip адрес пользователя
-    "api_id" => "cd531320-b159-f104-6d80-c9a2222e3c3e"
+    "api_id" => "********-b159-f104-6d80-c9a2222e3c3e"
 )));
 $body = curl_exec($ch);
 curl_close($ch);
@@ -118,7 +118,7 @@ if ($json) { // Получен ответ от сервера
 ## Авторизация по звонку из PHP без curl
 
 ```php
-$body = file_get_contents("https://sms.ru/code/call?phone=79516677606&ip=".$_SERVER["REMOTE_ADDR"]); 
+$body = file_get_contents("https://sms.ru/code/call?phone=795166776**&ip=".$_SERVER["REMOTE_ADDR"]); 
 $json = json_decode($body);
 print_r($json); // Для дебага
 // Для разбора $json можно использовать кусок кода из предыдущего примера.
@@ -134,8 +134,8 @@ use HTTP::Request::Common qw(POST);
 $ua = LWP::UserAgent->new;
 my $req = POST 'https://sms.ru/code/call',
 [
-phone => '79516677606',
-api_id => 'cd531320-b159-f104-6d80-c9a2222e3c3e',
+phone => '795166776**',
+api_id => '********-b159-f104-6d80-c9a2222e3c3e',
 ];
 print $ua->request($req)->as_string;
 ```
@@ -143,5 +143,5 @@ print $ua->request($req)->as_string;
 ## Авторизация по звонку из командной строки bash
 
 ```bash
-curl --data-urlencode "phone=79516677606" "https://sms.ru/sms/send?api_id=cd531320-b159-f104-6d80-c9a2222e3c3e"
+curl --data-urlencode "phone=795166776**" "https://sms.ru/sms/send?api_id=********-b159-f104-6d80-c9a2222e3c3e"
 ```
