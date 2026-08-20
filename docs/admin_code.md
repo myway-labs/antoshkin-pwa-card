@@ -1,7 +1,7 @@
 # Справочник команд для администрирования кодовой базы
 
 ```bash
-ssh mynamemyway@91.206.14.93
+ssh mynamemyway@139.100.207.**
 cd /home/mynamemyway/projects/antoshkin-pwa-card
 
 # Код
