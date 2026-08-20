@@ -262,7 +262,7 @@ crontab -e
 *При первом запуске выбрать редактор `1` (nano), прокрутить файл в самый низ и вставить строку:*
 
 ```cron
-0 3 * * * /bin/bash /home/mynamemyway/projects/antoshkin-pwa-card/backup-db.sh > /dev/null 2>&1
+0 0 * * * /bin/bash /home/mynamemyway/projects/antoshkin-pwa-card/backup-db.sh > /dev/null 2>&1
 ```
 *Сохранить файл через `Ctrl + O` -> `Enter`, выйти через `Ctrl + X`.*
 *Внимание: время 03:00 рассчитывается по системному времени сервера (UTC).*
