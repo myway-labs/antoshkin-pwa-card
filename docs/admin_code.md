@@ -12,6 +12,8 @@ docker-compose up -d --build
 
 # Логи
 docker-compose logs -f app
+docker-compose logs nginx
+docker-compose logs nginx | grep -E "phpunit|containers/json|allow_url_include"
 
 # Запуск
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
