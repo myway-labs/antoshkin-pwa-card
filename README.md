@@ -2,7 +2,7 @@
 
 > **Версия:** 2.1.0  
 > **Статус:** ✅ Production Ready  
-> **Релиз:** [v2.0.0](https://github.com/myway-labs/antoshkin-pwa-card/releases/tag/v2.0.0)  
+> **Релиз:** [v2.1.0](https://github.com/myway-labs/antoshkin-pwa-card/releases/tag/v2.1.0)  
 
 Система цифровых дисконтных карт для цветочного комбината [https://card.rassada1.ru/](https://card.rassada1.ru)
 
