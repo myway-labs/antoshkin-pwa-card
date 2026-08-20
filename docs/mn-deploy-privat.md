@@ -200,10 +200,14 @@ sudo certbot certonly --standalone \
 
 ### 4.2 Авто-продление SSL (Бессмертный режим)
 
-Настрой это одной командой:
-
+1. **Установить автопродление**
 ```bash
 sudo certbot renew --dry-run --pre-hook "docker compose -f /home/<USER>/projects/antoshkin-pwa-card/docker-compose.yml stop nginx" --post-hook "docker compose -f /home/<USER>/projects/antoshkin-pwa-card/docker-compose.yml start nginx"
+```
+
+3. **Разрешить автопродление**
+```bash
+sudo sed -i '/\[renewalparams\]/a pre_hook = docker compose -f /home/mynamemyway/projects/antoshkin-pwa-card/docker-compose.yml stop nginx\npost_hook = docker compose -f /home/mynamemyway/projects/antoshkin-pwa-card/docker-compose.yml start nginx' /etc/letsencrypt/renewal/card.rassada1.ru.conf
 ```
 
 ---
