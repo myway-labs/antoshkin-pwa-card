@@ -7,8 +7,8 @@ cd /home/mynamemyway/projects/antoshkin-pwa-card
 # Код
 git pull
 nano .env
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 
 # Логи
 docker-compose logs -f app
