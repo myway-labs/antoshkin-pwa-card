@@ -243,55 +243,38 @@ docker compose logs -f app
 docker compose logs -f nginx
 ```
 
-### 5.4. Резервное копирование БД
+## Этап 6. Настройка автоматического резервного копирования (Бэкапы)
 
-**Создать скрипт бэкапа:**
+Настройка еженощного бэкапа базы данных SQLite с автоматической очисткой старых копий (хранится история за последние 7 дней).
 
+### 6.1. Активация прав на запуск скрипта
+Выполняется на сервере под пользователем `mynamemyway` в папке проекта:
 ```bash
-nano /home/<USER>/projects/antoshkin-pwa-card/backup-db.sh
+cd /home/mynamemyway/projects/antoshkin-pwa-card
+chmod +x backup-db.sh
 ```
 
-**Содержимое:**
-
-```bash
-#!/bin/bash
-PROJECT_DIR="/home/<USER>/projects/antoshkin-pwa-card"
-BACKUP_DIR="$PROJECT_DIR/backups"
-DATE=$(date +%Y%m%d_%H%M%S)
-
-mkdir -p $BACKUP_DIR
-cp "$PROJECT_DIR/data/loyalty.db" "$BACKUP_DIR/loyalty_$DATE.db"
-ls -t $BACKUP_DIR/*.db | tail -n +8 | xargs -r rm
-```
-
-**Сделать исполняемым:**
-
-```bash
-chmod +x /home/<USER>/projects/antoshkin-pwa-card/backup-db.sh
-```
-
-**Добавить в cron (ежедневно в 2:00):**
-
+### 6.2. Добавление задачи в планировщик Cron
+Выполнить команду для редактирования персонального расписания пользователя (без sudo):
 ```bash
 crontab -e
 ```
-
-**Добавить строку:**
+*При первом запуске выбрать редактор `1` (nano), прокрутить файл в самый низ и вставить строку:*
 
 ```cron
-0 2 * * * /home/<USER>/projects/antoshkin-pwa-card/backup-db.sh >> /home/<USER>/projects/antoshkin-pwa-card/backups/backup.log 2>&1
+0 3 * * * /bin/bash /home/mynamemyway/projects/antoshkin-pwa-card/backup-db.sh > /dev/null 2>&1
+```
+*Сохранить файл через `Ctrl + O` -> `Enter`, выйти через `Ctrl + X`.*
+*Внимание: время 03:00 рассчитывается по системному времени сервера (UTC).*
+
+### 6.3. Ручная проверка работы скрипта
+Запустить скрипт вручную и убедиться, что в папке `backups` появился свежий дамп базы данных:
+```bash
+./backup-db.sh
+ls -la backups/
 ```
 
 ---
-
-## Что мы изменили (Итоговое резюме):
-
-* **Порядок клонирования:** Сначала `git clone`, затем создание папки `data` внутри него, чтобы избежать конфликтов Git.
-* **Удален Systemd:** Docker Compose с флагом `restart: always` сделает ту же работу чище.
-* **Удалено копирование SSL:** Теперь используем `readonly` проброс папки `/etc/letsencrypt` напрямую.
-* **Исправлен SSL Renewal:** Добавлены хуки для управления контейнером Nginx.
-* **Добавлен UFW:** Без открытия портов 80 и 443 сайт бы не открылся.
-* **Добавлены бэкапы:** Ежедневное резервное копирование БД с использованием абсолютных путей.
 
 ## Итоговый маршрут:
 1. DNS/Ping — убеждаешься, что домен "видит" сервер.
