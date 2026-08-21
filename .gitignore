@@ -1,15 +1,9 @@
-# Python
+# System
 .pytest_cache/
 __pycache__/
 .DS_Store
 Thumbs.db
-.Python
-*.py[cod]
-*$py.class
-*.egg-info/
 .vscode/
-.eggs/
-*.so
 
 # Environments
 .env.production
@@ -32,8 +26,6 @@ _*
 *me.*
 *tmp*
 *tmp.*
-*temp*
-*temp.*
 *archive
 
 # Obsisidan
