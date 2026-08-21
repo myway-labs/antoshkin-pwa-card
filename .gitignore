@@ -1,45 +1,41 @@
 # Python
+.pytest_cache/
 __pycache__/
+.DS_Store
+Thumbs.db
+.Python
 *.py[cod]
 *$py.class
-*.so
-.Python
 *.egg-info/
+.vscode/
 .eggs/
+*.so
 
-# Virtual environments
+# Environments
 .env.production
 .env
 .venv
 venv/
-ENV/
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Database (SQLite)
-*.db
+# Data base
 *.db-journal
-loyalty.db
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-
-# OS
-.DS_Store
-Thumbs.db
+*.grist
+*.sql
+*.db
 
 # Logs
 *.log
 
-# For develop
-/4dev
-.lsp.json
-docs/temp.md
-docs/done/temp.md
+# For me / for dev
+_*
+*me
+*me.*
+*tmp*
+*tmp.*
+*temp*
+*temp.*
+*archive
+
+# Obsisidan
+.obsidian/
+.airsync/conflicts/
